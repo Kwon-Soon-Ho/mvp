@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>내전 설문 데이터 분석 및 개편안</title>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* [1] Design Token & Base Setup */
+        :root {
+            --bg-canvas: #f1f5f9;
+            --bg-slide: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --brand-primary: #2563eb;
+            --brand-secondary: #3b82f6;
+            --brand-light: #eff6ff;
+            --border-color: #e2e8f0;
+            --accent-success: #16a34a;
+            --accent-danger: #dc2626;
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --ai-primary: #8b5cf6;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            background-color: var(--bg-canvas);
+            display: grid;
+            gap: 40px;
+            grid-template-columns: 1fr;
+            min-height: 100vh;
+            padding: 40px 0;
+            place-items: center;
+            font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', sans-serif;
+            color: var(--text-primary);
+        }
+
+        /* [2] Slide Container Structure (Fixed 16:9 1280x720) */
+        .slide-container {
+            align-items: center;
+            background-color: var(--bg-slide);
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            flex-direction: column;
+            height: 720px;
+            justify-content: flex-start;
+            overflow: hidden;
+            padding: 60px 80px;
+            position: relative;
+            width: 1280px;
+            scroll-snap-align: start;
+        }
+
+        .abstract-shape-1 {
+            position: absolute; width: 500px; height: 500px;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.06) 0%, transparent 100%);
+            border-radius: 50%; top: -150px; right: -100px; z-index: 0;
+        }
+        .abstract-shape-2 {
+            position: absolute; width: 400px; height: 400px;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.06) 0%, transparent 100%);
+            border-radius: 50%; bottom: -100px; left: -100px; z-index: 0;
+        }
+        
+        .slide-container > * { position: relative; z-index: 1; width: 100%; }
+
+        /* [3] Typography Hierarchy */
+        h1 { font-size: 56px; font-weight: 800; line-height: 1.3; color: var(--text-primary); letter-spacing: -0.02em; }
+        h2.slide-title {
+            font-size: 32px; font-weight: 700; color: var(--brand-primary);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 16px; margin-bottom: 32px; text-align: left;
+            letter-spacing: -0.01em;
+        }
+        h3 { font-size: 22px; font-weight: 700; color: var(--text-primary); margin-bottom: 16px; }
+        p { font-size: 18px; line-height: 1.6; color: var(--text-secondary); margin-bottom: 16px; }
+        .subtitle { font-size: 24px; font-weight: 500; color: var(--text-muted); margin-top: 16px; }
+
+        /* Text Highlights & Effects */
+        .hl-blue { color: var(--brand-primary); font-weight: 700; }
+        .hl-red { color: var(--accent-danger); font-weight: 700; }
+        .hl-green { color: var(--accent-success); font-weight: 700; }
+        
+        /* 24 숫자 폰트 효과 (내부 채움, 외곽만 빛남) */
+        .glow-number { 
+            color: var(--brand-primary); 
+            text-shadow: 0 0 10px rgba(37, 99, 235, 0.6), 0 0 25px rgba(37, 99, 235, 0.4);
+        }
+
+        /* [4] Layout Components */
+        .content-area { display: flex; flex-direction: column; flex-grow: 1; width: 100%; }
+        .grid-2-col { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; width: 100%; align-items: start; }
+        .grid-3-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; width: 100%; align-items: stretch; }
+
+        /* Card UI */
+        .card {
+            background-color: #f8fafc; border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 28px 32px; display: flex; flex-direction: column;
+        }
+        
+        /* List Styling */
+        ul.structured-list { list-style: none; padding: 0; margin: 0; }
+        ul.structured-list li {
+            position: relative; padding-left: 20px; margin-bottom: 12px;
+            font-size: 15px; line-height: 1.5; color: var(--text-secondary);
+        }
+        ul.structured-list li::before { content: '•'; position: absolute; left: 0; color: var(--brand-primary); font-weight: bold; }
+
+        .icon-box {
+            width: 48px; height: 48px; border-radius: 8px; background-color: rgba(37, 99, 235, 0.1);
+            color: var(--brand-primary); display: flex; align-items: center; justify-content: center;
+            font-size: 24px; margin-bottom: 20px;
+        }
+
+        /* Compact Table UI */
+        table.data-table {
+            width: 100%; border-collapse: collapse; background: #fff;
+            border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+        table.data-table th, table.data-table td {
+            padding: 18px 24px; text-align: left; border-bottom: 1px solid var(--border-color);
+            font-size: 16px; line-height: 1.5; vertical-align: top;
+        }
+        table.data-table th { background-color: var(--brand-light); font-weight: 700; color: var(--brand-primary); font-size: 18px; border-bottom: 2px solid var(--brand-primary); }
+        table.data-table tr:last-child td { border-bottom: none; }
+
+        /* Tournament Flow Logic (Grid Alignment) */
+        .flow-container { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+        .flow-row {
+            display: grid; 
+            grid-template-columns: 130px minmax(0, 1.2fr) 20px minmax(0, 1.2fr) 20px minmax(0, 1fr);
+            align-items: center; gap: 12px; background: #fff;
+            border: 1px solid var(--border-color); border-radius: 8px; padding: 16px 20px;
+            box-shadow: var(--shadow-sm);
+        }
+        .flow-row.final-row {
+            grid-template-columns: 130px minmax(0, 1fr) 40px minmax(0, 1fr);
+            border-color: var(--brand-secondary);
+            background: #f8fafc;
+        }
+
+        .flow-badge {
+            padding: 8px 12px; border-radius: 6px; font-weight: 700; font-size: 14px; 
+            text-align: center; white-space: nowrap; width: 100%;
+        }
+        .flow-badge.w1 { background-color: var(--brand-light); color: var(--brand-primary); border: 1px solid #bfdbfe; }
+        .flow-badge.w2 { background-color: #fef2f2; color: var(--accent-danger); border: 1px solid #fecaca; }
+        .flow-badge.final { background-color: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+        
+        .flow-step { 
+            font-size: 15px; font-weight: 600; color: var(--text-primary); 
+            background: #f1f5f9; padding: 10px 12px; border-radius: 6px; 
+            text-align: center; display: flex; flex-direction: column; justify-content: center;
+        }
+        .flow-arrow { 
+            color: var(--text-muted); font-size: 16px; display: flex; justify-content: center;
+        }
+
+        /* Banners & Badges */
+        .rule-banner {
+            background-color: #f0fdf4; border: 1px solid #bbf7d0; color: #166534;
+            padding: 16px 24px; border-radius: 8px; font-weight: 500; font-size: 16px;
+            display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+        }
+        .badge-gray { 
+            display: inline-block; padding: 4px 14px; border-radius: 16px; 
+            font-size: 14px; font-weight: 600; margin-bottom: 16px; 
+            background-color: #e2e8f0; color: var(--text-secondary); 
+            width: fit-content; 
+        }
+
+        /* Absolute Placement Utility - 화면 정중앙(기하학적 중심) 정렬 보장 */
+        .absolute-center-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            width: 100%;
+            z-index: 10;
+        }
+
+        /* [5] AI Assistant Chat UI */
+        .ai-fab {
+            position: fixed; bottom: 40px; right: 40px; width: 64px; height: 64px;
+            background: linear-gradient(135deg, var(--ai-primary), var(--brand-primary));
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 28px; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4);
+            cursor: pointer; z-index: 1000; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .ai-fab:hover { transform: scale(1.1); }
+
+        .ai-panel {
+            position: fixed; bottom: 120px; right: 40px; width: 400px; max-height: 600px;
+            background: white; border-radius: 16px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            display: flex; flex-direction: column; z-index: 999; overflow: hidden;
+            opacity: 0; pointer-events: none; transform: translateY(20px);
+            transition: all 0.3s ease; border: 1px solid var(--border-color);
+        }
+        .ai-panel.active { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        .ai-header {
+            background: linear-gradient(135deg, var(--ai-primary), var(--brand-primary));
+            padding: 20px; color: white; display: flex; align-items: center; justify-content: space-between;
+        }
+        .ai-header h3 { color: white; margin: 0; font-size: 18px; display: flex; align-items: center; gap: 8px;}
+        .close-ai { cursor: pointer; font-size: 20px; opacity: 0.8; }
+        .close-ai:hover { opacity: 1; }
+        
+        .ai-chat-area {
+            padding: 20px; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column;
+            gap: 16px; background-color: #f8fafc; min-height: 250px; max-height: 350px;
+        }
+        .chat-bubble { max-width: 85%; padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.5; }
+        .chat-bubble.ai { background-color: white; color: var(--text-primary); border: 1px solid var(--border-color); border-bottom-left-radius: 4px; align-self: flex-start; }
+        .chat-bubble.user { background-color: var(--brand-primary); color: white; border-bottom-right-radius: 4px; align-self: flex-end; }
+        
+        .ai-suggestions {
+            padding: 12px 20px; background-color: white; border-top: 1px solid var(--border-color);
+            display: flex; gap: 8px; overflow-x: auto; white-space: nowrap;
+        }
+        .ai-suggestions::-webkit-scrollbar { display: none; }
+        .suggestion-btn {
+            background-color: #f1f5f9; border: 1px solid var(--border-color); color: var(--text-secondary);
+            padding: 8px 12px; border-radius: 20px; font-size: 13px; cursor: pointer;
+            transition: all 0.2s; font-weight: 500;
+        }
+        .suggestion-btn:hover { background-color: #e2e8f0; color: var(--text-primary); }
+        
+        .ai-input-area {
+            padding: 16px 20px; background-color: white; border-top: 1px solid var(--border-color);
+            display: flex; gap: 12px; align-items: center;
+        }
+        .ai-input-area input {
+            flex-grow: 1; border: 1px solid var(--border-color); border-radius: 24px;
+            padding: 10px 16px; font-size: 14px; outline: none; transition: border-color 0.2s; font-family: inherit;
+        }
+        .ai-input-area input:focus { border-color: var(--ai-primary); }
+        .ai-send-btn {
+            width: 36px; height: 36px; border-radius: 50%; background-color: var(--ai-primary);
+            color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: background-color 0.2s;
+        }
+        .ai-send-btn:hover { background-color: #7c3aed; }
+        .ai-send-btn:disabled { background-color: var(--text-muted); cursor: not-allowed; }
+        
+        .loading-dots { display: flex; gap: 4px; padding: 4px 8px; }
+        .dot { width: 6px; height: 6px; background-color: var(--text-muted); border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+<!-- Slide 1: Cover (Perfectly Centered) -->
+<div class="slide-container">
+    <div class="abstract-shape-1"></div>
+    <div class="abstract-shape-2"></div>
+    <div class="absolute-center-wrapper" style="max-width: 900px;">
+        <h1 style="margin-bottom: 16px;">MVP 투표 결과 및 내전 설문 결과</h1>
+        <p class="subtitle" style="margin: 0;">내전 결과 데이터 분석 및 운영 개편안</p>
+    </div>
+</div>
+
+<!-- Slide 2: Overview -->
+<div class="slide-container">
+    <h2 class="slide-title">데이터 수집 개요</h2>
+    <div class="content-area grid-2-col" style="align-items: center; height: 100%;">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <div class="glow-number" style="font-size: 150px; font-weight: 900; line-height: 1.1;">24</div>
+            <div style="font-size: 20px; font-weight: 600; color: var(--text-secondary); margin-top: 16px;">설문 응답 수집 건수</div>
+        </div>
+        <div>
+            <h3 style="font-size: 24px;">참여자의 피드백을 기반으로 한 구조적 개편</h3>
+            <p>이번 분석은 클랜 내전 참여자 전원의 설문 응답 데이터를 바탕으로 작성되었습니다.</p>
+            <p>데이터 분석 결과, 클랜 운영진들의 신속한 대응과 참여자 전반의 <span class="hl-blue">실력 향상에 대한 만족도는 매우 높았습니다.</span></p>
+            <p>다만, <strong>단일 압축 일정</strong>과 <strong>가혹한 픽 제한 룰</strong>로 인한 극심한 <span class="hl-red">체력적·심리적 피로도</span>가 향후 내전 운영의 핵심 리스크로 대두되어 이에 대한 구조적 개편이 필요합니다.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 3: MVP Results -->
+<div class="slide-container">
+    <h2 class="slide-title">팀별 MVP 선정 결과 및 상세 사유</h2>
+    <div class="content-area grid-3-col">
+        <div class="card" style="padding: 24px 28px;">
+            <div class="icon-box"><i class="fa-solid fa-shield-halved"></i></div>
+            <h3>도토리킬러햄스터</h3>
+            <span class="badge-gray">예담만두짱 팀</span>
+            <ul class="structured-list" style="margin-top: 12px;">
+                <li><span class="hl-blue">핵심 픽 억제력:</span> 상대가 까다롭게 느낄 정도의 위협적인 탱커(티엔, 니콜라스, 디아나) 플레이를 통한 전선 유지</li>
+                <li><span class="hl-blue">지속적 성장:</span> 새벽 피드백 영상 시청 등 지속적인 성장 노력</li>
+                <li><span class="hl-blue">주도적 헌신:</span> 내전 일정 조율에 주도적으로 헌신</li>
+            </ul>
+        </div>
+        <div class="card" style="padding: 24px 28px;">
+            <div class="icon-box"><i class="fa-solid fa-user-ninja"></i></div>
+            <h3>전국택배전문수노</h3>
+            <span class="badge-gray">연우삼촌들 팀</span>
+            <ul class="structured-list" style="margin-top: 12px;">
+                <li><span class="hl-blue">안정적 폼 유지:</span> 즐겜 성향을 배제하고 본인 역할 수행</li>
+                <li><span class="hl-blue">긍정적 리더십:</span> 팀 분위기를 긍정적으로 주도하며 꼼꼼한 픽/밴 전략 수립</li>
+                <li><span class="hl-blue">팀 멘탈 케어:</span> 기복 없는 플레이로 팀에 심리적 안정감 제공</li>
+            </ul>
+        </div>
+        <div class="card" style="padding: 24px 28px;">
+            <div class="icon-box"><i class="fa-solid fa-khanda"></i></div>
+            <h3>시대의협객권민수</h3>
+            <span class="badge-gray">토달면죽임 팀</span>
+            <ul class="structured-list" style="margin-top: 12px;">
+                <li><span class="hl-blue">압도적 무력:</span> 특정 픽(그레타 등)을 통해 상대에게 공포감을 심어줌</li>
+                <li><span class="hl-blue">독보적 성과:</span> 현재 티어를 초월하는 독보적 성과 증명</li>
+                <li><span class="hl-blue">클러치 창출:</span> 교전 판도를 단번에 뒤집는 날카로운 진입각 및 변수 창출</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 4: Feedback -->
+<div class="slide-container">
+    <h2 class="slide-title">참여자 설문 의견 분석 (Positive / Improve)</h2>
+    <div class="content-area grid-2-col">
+        <div class="card" style="border-top: 4px solid var(--accent-success);">
+            <h3 style="color: var(--accent-success); display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-circle-check"></i> 긍정적 피드백
+            </h3>
+            <ul class="structured-list" style="margin-top: 16px;">
+                <li><span class="hl-green">운영 신뢰도:</span> 클랜 운영진들의 빠르고 명확한 피드백 수용과 신속한 일 처리 속도에 대한 높은 만족도</li>
+                <li><span class="hl-green">경기 질 향상:</span> 참여자들의 전반적인 실력이 상향 평준화되어 관전의 박진감과 몰입도 증가</li>
+                <li><span class="hl-green">신규 룰 시도:</span> 기존에 없던 룰(하드 피어리스) 도입 자체가 주는 신선함과 전략적 재미 확인</li>
+            </ul>
+        </div>
+        <div class="card" style="border-top: 4px solid var(--accent-danger);">
+            <h3 style="color: var(--accent-danger); display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-triangle-exclamation"></i> 개선 필요 사항
+            </h3>
+            <ul class="structured-list" style="margin-top: 16px;">
+                <li><span class="hl-red">극심한 체력 고갈:</span> 하루 6경기(총 12경기) 연속 강행군으로 인한 후반부 집중력 저하 및 에이징 이슈 심각</li>
+                <li><span class="hl-red">룰 스트레스 한계:</span> 하드 피어리스와 중복 밴 금지 룰의 결합으로 인한 극도의 픽 고갈 압박감 호소</li>
+                <li><span class="hl-red">참가 규모 확대:</span> 5~6팀으로 인원 확대 및 예비 인원 제도를 통한 폭넓은 참여 기회 요구</li>
+                <li><span class="hl-red">태도 및 규율:</span> 무성의한 프로필 기입 및 연습 시간 미준수(노쇼/지각) 문제</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 5: Problem Definition (Perfectly Centered) -->
+<div class="slide-container">
+    <div class="abstract-shape-1"></div>
+    <div class="absolute-center-wrapper" style="max-width: 800px;">
+        <div style="display: inline-block; padding: 8px 16px; background-color: rgba(220, 38, 38, 0.1); color: var(--accent-danger); border-radius: 8px; font-weight: 700; margin-bottom: 24px;">핵심 문제 정의</div>
+        <h2 style="font-size: 40px; font-weight: 800; color: var(--text-primary); line-height: 1.4; margin-bottom: 32px; text-align: center; border: none; border-bottom: none;">
+            단기 압축 일정과 극단적 픽 제한의 결합은<br>
+            참여자에게 <span class="hl-red">한계치 이상의 피로도</span>를 유발합니다.
+        </h2>
+        <p style="font-size: 20px; color: var(--text-secondary); margin: 0;">
+            단순한 불만을 넘어 후반부 텐션 저하와 매칭 품질 하락으로 직결되며,<br>
+            장기적으로 유저들의 <strong>내전 참여 자체를 억제하는 근본적 리스크</strong>입니다.
+        </p>
+    </div>
+</div>
+
+<!-- Slide 6: Alternatives Table -->
+<div class="slide-container">
+    <h2 class="slide-title">차기 내전 운영 개편안 대안 비교</h2>
+    <div class="content-area">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 16%;">비교 항목</th>
+                    <th style="width: 42%;">A안: 안정형 개편 (추천)</th>
+                    <th style="width: 42%; color: var(--text-primary); background-color: #f8fafc;">B안: 변수 창출형</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>일정 구조</strong></td>
+                    <td colspan="2" style="background-color: #f8fafc; text-align: center;">
+                        팀 경매 → 1주 연습 → <strong>1주차(토) 경기</strong> → 1주 연습 → <strong>2주차(토) 경기</strong> <span class="hl-blue">(더블 엘리미네이션)</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>픽/밴 룰</strong></td>
+                    <td>
+                        <div class="hl-blue" style="font-size: 18px; margin-bottom: 8px;">소프트 피어리스 + 중복 밴 허용</div>
+                        <span style="font-size: 14px; color: var(--text-muted);">직전 경기에 쓴 픽만 사용 불가. 핵심 조커 픽 고정 밴 가능.</span>
+                    </td>
+                    <td>
+                        <div style="font-weight: 700; font-size: 18px; margin-bottom: 8px;">중복 픽 허용 + 중복 밴 금지</div>
+                        <span style="font-size: 14px; color: var(--text-muted);">주력 픽 무제한 사용. 대신 매판 밴 카드 강제 교체.</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>기대 효과</strong></td>
+                    <td><span class="hl-green">안정적 밸런스 유지 및 스트레스 대폭 해소</span></td>
+                    <td>참여자 최고 기량 발휘 및 매 경기 밴 변경 양상 변화</td>
+                </tr>
+                <tr>
+                    <td><strong>리스크</strong></td>
+                    <td>챔피언 폭이 1~2개인 극단적 장인 유저는 여전히 제약 존재</td>
+                    <td><span class="hl-red">주력 픽 제어 실패 시 일방적 학살 경기 속출 위험</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Slide 7: Double Elimination Flow -->
+<div class="slide-container">
+    <h2 class="slide-title">4팀 기준 더블 엘리미네이션 진행 로직</h2>
+    <div class="content-area">
+        
+        <!-- Game Rule Banner -->
+        <div class="rule-banner">
+            <i class="fa-solid fa-gavel" style="font-size: 20px;"></i>
+            <span><strong>경기 세부 룰:</strong> 모든 라운드는 <span class="hl-green">3판 2선승제(BO3)</span>로 진행되며, 세트 스코어 1:1 동점 시 마지막 3세트는 <span class="hl-red">블라인드 픽</span>으로 진행합니다.</span>
+        </div>
+
+        <div class="grid-2-col" style="gap: 32px; align-items: stretch; grid-template-columns: 32% 68%;">
+            <!-- Left Text Column -->
+            <div class="card" style="justify-content: center; padding: 24px;">
+                <h3 style="font-size: 19px; color: var(--brand-primary);"><i class="fa-solid fa-rotate-right" style="margin-right: 8px;"></i>2번 패배해야 최종 탈락</h3>
+                <p style="font-size: 15px; margin-bottom: 16px;">1주차 패배 팀(<span class="hl-red">공동 3위 및 2위 팀</span>)들은 즉시 탈락하지 않고, 2주차 패자조 도장깨기를 통해 최종 결승까지 올라갈 수 있는 <strong>복수의 기회</strong>를 얻습니다.</p>
+                <ul class="structured-list" style="font-size: 14px;">
+                    <li><span class="hl-blue">체력 분배:</span> 1주차(승자조)와 2주차(패자조/결승) 분리</li>
+                    <li><span class="hl-blue">동기 부여:</span> 패배 팀에게 '심기일전' 연습 기회 제공</li>
+                    <li><span class="hl-blue">흥행 요소:</span> 밑바닥부터 뚫고 올라가는 매치업 연출</li>
+                </ul>
+            </div>
+
+            <!-- Right Flow Column -->
+            <div class="flow-container">
+                <!-- Week 1 -->
+                <div class="flow-row">
+                    <div class="flow-badge w1">1주차 (승자조)</div>
+                    <div class="flow-step">4강전<br><span style="font-size: 12px; font-weight:normal;">A vs B, C vs D</span></div>
+                    <div class="flow-arrow"><i class="fa-solid fa-chevron-right"></i></div>
+                    <div class="flow-step">승자조 결승</div>
+                    <div class="flow-arrow"><i class="fa-solid fa-chevron-right"></i></div>
+                    <div class="flow-step hl-blue" style="background: #e0f2fe; white-space: nowrap;">1위 최종 결승 직행</div>
+                </div>
+                <!-- Week 2 -->
+                <div class="flow-row">
+                    <div class="flow-badge w2">2주차 (패자조)</div>
+                    <div class="flow-step">패자조 1R<br><span style="font-size: 12px; font-weight:normal;">4강 패배(공동 3위) 대결</span></div>
+                    <div class="flow-arrow"><i class="fa-solid fa-chevron-right"></i></div>
+                    <div class="flow-step">패자조 결승<br><span style="font-size: 12px; font-weight:normal;">승자조 2위 vs 1R 승자</span></div>
+                    <div class="flow-arrow"><i class="fa-solid fa-chevron-right"></i></div>
+                    <div class="flow-step hl-red" style="background: #fef2f2; white-space: nowrap;">최종 결승 진출</div>
+                </div>
+                <!-- Final -->
+                <div class="flow-row final-row">
+                    <div class="flow-badge final">최종 결승전</div>
+                    <div class="flow-step hl-blue" style="background: #fff; border: 2px solid var(--brand-primary); font-size: 16px;">1주차 1위 팀</div>
+                    <div class="flow-arrow"><strong style="color: var(--text-muted);">VS</strong></div>
+                    <div class="flow-step hl-red" style="background: #fff; border: 2px solid var(--accent-danger); font-size: 16px;">패자조 최종 생존 팀</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 8: Final Recommendation -->
+<div class="slide-container">
+    <h2 class="slide-title">최종 결론: A안 (안정형 개편) 적용</h2>
+    <div class="content-area">
+        <div class="card" style="padding: 40px; border: 2px solid var(--brand-primary); box-shadow: var(--shadow-sm);">
+            <h3 style="font-size: 28px; color: var(--brand-primary); margin-bottom: 40px; text-align: center;">
+                2주 분할 더블 엘리미네이션 + 소프트 피어리스
+            </h3>
+            <div class="grid-3-col">
+                <div>
+                    <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+                        <div class="icon-box"><i class="fa-solid fa-calendar-days"></i></div>
+                        <h4 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">일정 분할의 힘</h4>
+                    </div>
+                    <p style="font-size: 16px; text-align: left;">2주로 나뉜 일정은 체력 부담을 지우고, 1주차 패배 팀에게 <strong class="hl-blue">'1주일의 전략 수정'</strong> 기간을 부여하여 후반부 몰입도를 극대화합니다.</p>
+                </div>
+                <div>
+                    <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+                        <div class="icon-box"><i class="fa-solid fa-scale-balanced"></i></div>
+                        <h4 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">최적의 타협점</h4>
+                    </div>
+                    <p style="font-size: 16px; text-align: left;">소프트 피어리스는 '다양한 캐릭터 등장'이라는 본래 취지를 유지하면서, 유저들의 <strong class="hl-green">'픽 고갈 스트레스'를 즉각 해소</strong>합니다.</p>
+                </div>
+                <div>
+                    <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+                        <div class="icon-box"><i class="fa-solid fa-lock"></i></div>
+                        <h4 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">전략적 변수 통제</h4>
+                    </div>
+                    <p style="font-size: 16px; text-align: left;"><strong class="hl-red">중복 밴을 허용</strong>함으로써, 특정 유저의 압도적인 조커 픽을 안정적으로 묶어두어 일방적인 게임 파괴 현상을 방지합니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Assistant Component -->
+<div class="ai-fab" id="aiFab" title="AI 클랜 보좌관 열기">
+    <i class="fa-solid fa-wand-magic-sparkles"></i>
+</div>
+
+<div class="ai-panel" id="aiPanel">
+    <div class="ai-header">
+        <h3><i class="fa-solid fa-robot"></i> 클랜 운영 AI 보좌관</h3>
+        <i class="fa-solid fa-xmark close-ai" id="aiClose"></i>
+    </div>
+    
+    <div class="ai-chat-area" id="chatArea">
+        <div class="chat-bubble ai">
+            안녕하세요! 전국애주가협회 클랜 운영진을 위한 AI 보좌관입니다. 슬라이드 데이터를 분석 완료했습니다. 무엇을 도와드릴까요?
+        </div>
+    </div>
+    
+    <div class="ai-suggestions">
+        <button class="suggestion-btn" onclick="sendPredefinedMsg('디스코드 공지용 3줄 요약 작성 ✨')">디스코드 3줄 요약 ✨</button>
+        <button class="suggestion-btn" onclick="sendPredefinedMsg('지각/노쇼 방지 재미있는 페널티 추천 ✨')">페널티 아이디어 추천 ✨</button>
+        <button class="suggestion-btn" onclick="sendPredefinedMsg('다음 내전 컨셉 아이디어 제안 ✨')">차기 이벤트 컨셉 추천 ✨</button>
+    </div>
+    
+    <div class="ai-input-area">
+        <input type="text" id="aiInput" placeholder="설문 데이터나 운영에 관해 질문해보세요..." autocomplete="off">
+        <button class="ai-send-btn" id="aiSendBtn"><i class="fa-solid fa-paper-plane"></i></button>
+    </div>
+</div>
+
+<script>
+    const aiFab = document.getElementById('aiFab');
+    const aiPanel = document.getElementById('aiPanel');
+    const aiClose = document.getElementById('aiClose');
+    const aiInput = document.getElementById('aiInput');
+    const aiSendBtn = document.getElementById('aiSendBtn');
+    const chatArea = document.getElementById('chatArea');
+
+    aiFab.addEventListener('click', () => {
+        aiPanel.classList.add('active');
+        aiFab.style.transform = 'scale(0)';
+    });
+
+    aiClose.addEventListener('click', () => {
+        aiPanel.classList.remove('active');
+        aiFab.style.transform = 'scale(1)';
+    });
+
+    const apiKey = ""; 
+    const systemPrompt = `당신은 '전국애주가협회' 클랜의 내전 운영진을 돕는 유능한 AI 보좌관입니다.
+[현재 클랜 내전 데이터 요약]
+- 응답: 총 24명
+- MVP 3인: 도토리킬러햄스터(예담만두짱), 전국택배전문수노(연우삼촌들), 시대의협객권민수(토달면죽임)
+- 참가자 주요 불만: 하루 12경기 강행군으로 인한 체력 고갈, 하드 피어리스+중복 밴 금지로 인한 픽 고갈, 연습 지각/노쇼 문제.
+- 확정된 차기 개편안(A안): 2주 분할 '더블 엘리미네이션' 토너먼트 적용, '소프트 피어리스'(직전 경기 사용 픽만 금지) + '중복 밴 허용'
+사용자(운영진)가 질문하면 위 데이터를 기반으로 실질적인 도움을 주세요. 어조는 친근하고 유쾌하게 작성하되, 관리자로서의 전문성과 책임감도 보여주세요. 마크다운 형식으로 가독성 좋게 답변해주세요.`;
+
+    async function fetchGeminiWithRetry(promptText, retries = 5) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        const payload = {
+            contents: [{ parts: [{ text: promptText }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] }
+        };
+
+        const delays = [1000, 2000, 4000, 8000, 16000];
+
+        for (let i = 0; i < retries; i++) {
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || "응답을 생성하지 못했습니다.";
+            } catch (error) {
+                if (i === retries - 1) throw error;
+                await new Promise(res => setTimeout(res, delays[i]));
+            }
+        }
+    }
+
+    function addMessage(text, isUser) {
+        const bubble = document.createElement('div');
+        bubble.className = `chat-bubble ${isUser ? 'user' : 'ai'}`;
+        if (isUser) {
+            bubble.textContent = text;
+        } else {
+            let formattedText = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\n/g, '<br>');
+            bubble.innerHTML = formattedText;
+        }
+        chatArea.appendChild(bubble);
+        chatArea.scrollTop = chatArea.scrollHeight;
+        return bubble;
+    }
+
+    function addLoading() {
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-bubble ai';
+        bubble.innerHTML = '<div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
+        chatArea.appendChild(bubble);
+        chatArea.scrollTop = chatArea.scrollHeight;
+        return bubble;
+    }
+
+    async function handleSend(text) {
+        if (!text.trim()) return;
+        aiInput.value = '';
+        aiInput.disabled = true;
+        aiSendBtn.disabled = true;
+
+        addMessage(text, true);
+        const loadingBubble = addLoading();
+
+        try {
+            const aiResponse = await fetchGeminiWithRetry(text);
+            chatArea.removeChild(loadingBubble);
+            addMessage(aiResponse, false);
+        } catch (error) {
+            chatArea.removeChild(loadingBubble);
+            addMessage("⚠️ 통신 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", false);
+        } finally {
+            aiInput.disabled = false;
+            aiSendBtn.disabled = false;
+            aiInput.focus();
+        }
+    }
+
+    window.sendPredefinedMsg = function(msg) { handleSend(msg); }
+    aiSendBtn.addEventListener('click', () => handleSend(aiInput.value));
+    aiInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSend(aiInput.value); });
+</script>
+
+</body>
+</html>
+```
